@@ -65,7 +65,7 @@ public class TablePersistenceTest {
 
         SimpleAnnotatedClass instance = new SimpleAnnotatedClass("key", false);
 
-        jsonDynamoMapper.putItem(SimpleAnnotatedClass.class, instance);
+        jsonDynamoMapper.save(SimpleAnnotatedClass.class, instance);
 
         DynamoDBMapper mapper = new DynamoDBMapper(amazonDynamoDBClient);
 
@@ -87,7 +87,11 @@ public class TablePersistenceTest {
 
         SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
 
-        jsonDynamoMapper.putItem(SimpleFreeBuilt.class, instance);
+        jsonDynamoMapper.save(SimpleFreeBuilt.class, instance);
+
+        SimpleFreeBuilt item = jsonDynamoMapper.getItem(SimpleFreeBuilt.class, "hk");
+
+        assertThat(item).isEqualToComparingFieldByField(instance);
     }
 
     @Test
@@ -106,14 +110,14 @@ public class TablePersistenceTest {
                         .setStringValue("val")
                         .build();
 
-        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
 
         GetItemResult item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
                 ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
 
         assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("1"));
 
-        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class,
+        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class,
                 new SimpleFreeBuiltVersioned.Builder().setVersion(1).mergeFrom(instance).build());
 
         item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
@@ -138,9 +142,9 @@ public class TablePersistenceTest {
                         .setStringValue("val")
                         .build();
 
-        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
 
-        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
     }
 
     /**
