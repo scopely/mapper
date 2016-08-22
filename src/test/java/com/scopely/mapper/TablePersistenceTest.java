@@ -22,8 +22,11 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("ALL")
 public class TablePersistenceTest {
     DynamoLocal dynamoLocal;
     AmazonDynamoDBClient amazonDynamoDBClient;
@@ -65,7 +68,7 @@ public class TablePersistenceTest {
 
         SimpleAnnotatedClass instance = new SimpleAnnotatedClass("key", false);
 
-        jsonDynamoMapper.save(SimpleAnnotatedClass.class, instance);
+        jsonDynamoMapper.save(instance);
 
         DynamoDBMapper mapper = new DynamoDBMapper(amazonDynamoDBClient);
 
@@ -87,9 +90,9 @@ public class TablePersistenceTest {
 
         SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
 
-        jsonDynamoMapper.save(SimpleFreeBuilt.class, instance);
+        jsonDynamoMapper.save(instance);
 
-        SimpleFreeBuilt item = jsonDynamoMapper.getItem(SimpleFreeBuilt.class, "hk");
+        SimpleFreeBuilt item = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").get();
 
         assertThat(item).isEqualToComparingFieldByField(instance);
     }
@@ -110,20 +113,18 @@ public class TablePersistenceTest {
                         .setStringValue("val")
                         .build();
 
-        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(instance);
 
         GetItemResult item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
                 ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
 
         assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("1"));
 
-        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class,
-                new SimpleFreeBuiltVersioned.Builder().setVersion(1).mergeFrom(instance).build());
+        jsonDynamoMapper.save(new SimpleFreeBuiltVersioned.Builder().setVersion(1).mergeFrom(instance).build());
 
-        item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
-                ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
+        SimpleFreeBuiltVersioned retrieved = jsonDynamoMapper.load(SimpleFreeBuiltVersioned.class, "hk").get();
 
-        assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("2"));
+        assertThat(retrieved.getVersion()).hasValue(2);
     }
 
     @Test(expected = ConditionalCheckFailedException.class)
@@ -142,9 +143,34 @@ public class TablePersistenceTest {
                         .setStringValue("val")
                         .build();
 
-        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(instance);
 
-        jsonDynamoMapper.save(SimpleFreeBuiltVersioned.class, instance);
+        jsonDynamoMapper.save(instance);
+    }
+
+    @Test
+    public void load_missingItem_emptyReturn() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        Optional<SimpleFreeBuilt> loaded = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk");
+
+        assertThat(loaded).isEmpty();
+    }
+
+    @Test
+    public void load_hashAndRange_found() throws Exception {
+
+    }
+
+    @Test
+    public void load_hashAndRange_notFound() throws Exception {
+
     }
 
     /**

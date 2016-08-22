@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 
 @SuppressWarnings("WeakerAccess")
 public class JsonDynamoMapper {
@@ -30,8 +31,10 @@ public class JsonDynamoMapper {
         this.amazonDynamoDB = amazonDynamoDB;
     }
 
-    public <T> PutItemResult save(Class<T> clazz, T item) throws MappingException {
+    public <T> PutItemResult save(T item) throws MappingException {
         JsonNode serialized = objectMapper.valueToTree(item);
+
+        Class<?> clazz = item.getClass();
 
         String tableName = tableName(clazz);
 
@@ -86,27 +89,37 @@ public class JsonDynamoMapper {
         return amazonDynamoDB.putItem(putItemRequest.withItem(attributeValueMap));
     }
 
-    public <T> T getItem(Class<T> clazz, String hashKey) throws MappingException {
+    public <T> Optional<T> load(Class<T> clazz, String hashKey) throws MappingException {
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)));
+
+        if (item.getItem() == null) {
+            return Optional.empty();
+        }
+
         ObjectNode converted = JsonNodeAttributeValueMapper.convert(item.getItem(), objectMapper);
 
         try {
-            return objectMapper.readValue(converted.traverse(), clazz);
+            return Optional.of(objectMapper.readValue(converted.traverse(), clazz));
         } catch (IOException e) {
             throw new MappingException("Exception deserializing", e);
         }
     }
 
-    public <T> T getItem(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
+    public <T> Optional<T> load(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(
                         hashKeyAttribute(clazz), new AttributeValue().withS(hashKey),
                         rangeKeyAttribute(clazz), new AttributeValue().withS(rangeKey)));
+
+        if (item.getItem() == null) {
+            return Optional.empty();
+        }
+
         ObjectNode converted = JsonNodeAttributeValueMapper.convert(item.getItem(), objectMapper);
 
         try {
-            return objectMapper.readValue(converted.traverse(), clazz);
+            return Optional.of(objectMapper.readValue(converted.traverse(), clazz));
         } catch (IOException e) {
             throw new MappingException("Exception deserializing", e);
         }

@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.util.RawValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +40,8 @@ public final class JsonNodeAttributeValueMapper {
                 root.put(entry.getKey(), attributeValue.getS());
             } else if (attributeValue.getN() != null) {
                 // Since Dynamo also has non-interpreted numerals, this should work
-                root.putRawValue(entry.getKey(), new RawValue(attributeValue.getN()));
+                String numeric = attributeValue.getN();
+                root.put(entry.getKey(), new BigDecimal(numeric));
             } else if (attributeValue.getM() != null) {
                 ObjectNode childNode = root.putObject(entry.getKey());
                 ObjectNode convertedMap = convert(attributeValue.getM(), objectMapper);
@@ -52,8 +53,7 @@ public final class JsonNodeAttributeValueMapper {
             } else if (attributeValue.getNS() != null) {
                 List<String> ns = attributeValue.getNS();
                 ArrayNode arrayNode = root.arrayNode(ns.size());
-                // Similarly to `N` above, we can use raw values
-                ns.forEach(n -> arrayNode.addRawValue(new RawValue(n)));
+                ns.forEach(n -> arrayNode.add(new BigDecimal(n)));
             } else {
                 throw new MappingException(String.format("Couldn't interpret %s => %s", entry.getKey(), entry.getValue()));
             }
