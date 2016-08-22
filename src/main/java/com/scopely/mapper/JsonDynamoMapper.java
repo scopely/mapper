@@ -1,20 +1,47 @@
 package com.scopely.mapper;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Method;
 import java.util.Map;
 
 public class JsonDynamoMapper {
     private AmazonDynamoDB amazonDynamoDB;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB) {
         this.amazonDynamoDB = amazonDynamoDB;
+    }
+
+    public <T> PutItemResult putItem(Class<T> clazz, T item) throws MappingException {
+        JsonNode serialized = objectMapper.valueToTree(item);
+        @Nullable DynamoDBTable tableAnnotation = clazz.getAnnotation(DynamoDBTable.class);
+        if (tableAnnotation == null) {
+            throw new MappingException("Class " + clazz + " missing required annotation " + DynamoDBTable.class);
+        }
+
+        Method[] methods = clazz.getMethods();
+        DynamoDBVersionAttribute versionAnnotation = null;
+        for (Method method : methods) {
+            if ((versionAnnotation = method.getAnnotation(DynamoDBVersionAttribute.class)) != null) {
+                break;
+            }
+        }
+
+        if (versionAnnotation != null) {
+            return putItem(serialized, tableAnnotation.tableName(), versionAnnotation.attributeName());
+        }
+
+        return putItem(serialized, tableAnnotation.tableName());
     }
 
     public PutItemResult putItem(JsonNode jsonNode, String table) throws MappingException {
@@ -31,12 +58,18 @@ public class JsonDynamoMapper {
                 .withTableName(table)
                 .withExpressionAttributeNames(ImmutableMap.of("#v", versionField));
 
-        if (currentVersion == null) {
+        if (currentVersion == null || currentVersion.getN() == null) {
             putItemRequest = putItemRequest.withConditionExpression("attribute_not_exists(#v)");
-            attributeValueMap = new ImmutableMap.Builder<String, AttributeValue>()
-                    .putAll(attributeValueMap)
-                    .put(versionField, new AttributeValue(versionField).withN("1"))
-                    .build();
+            ImmutableMap.Builder<String, AttributeValue> builder = new ImmutableMap.Builder<>();
+
+            attributeValueMap.entrySet()
+                    .stream()
+                    .filter(e -> !e.getKey().equals(versionField))
+                    .forEach(e -> builder.put(e.getKey(), e.getValue()));
+
+            builder.put(versionField, new AttributeValue().withN("1"));
+
+            attributeValueMap = builder.build();
         } else {
             putItemRequest = putItemRequest.withConditionExpression("#v = :vf")
                     .withExpressionAttributeValues(ImmutableMap.of(":vf", new AttributeValue().withN(currentVersion.getN())));
