@@ -3,7 +3,6 @@ plugins {
 }
 
 group 'com.scopely'
-version '0.1'
 
 apply plugin: 'java'
 apply plugin: 'maven'
