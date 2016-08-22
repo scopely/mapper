@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.ImmutableMap;
-import com.sun.istack.internal.NotNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -51,7 +51,7 @@ public class JsonDynamoMapper {
         return amazonDynamoDB.putItem(new PutItemRequest().withTableName(table).withItem(attributeValueMap));
     }
 
-    public PutItemResult putItem(JsonNode jsonNode, String table, @NotNull String versionField) throws MappingException {
+    public PutItemResult putItem(JsonNode jsonNode, String table, @Nonnull String versionField) throws MappingException {
         Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
 
         @Nullable AttributeValue currentVersion = attributeValueMap.get(versionField);
