@@ -59,31 +59,46 @@ public class TablePersistenceTest {
 
         JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
-        HKClass instance = new HKClass("key", false);
+        SimpleAnnotatedClass instance = new SimpleAnnotatedClass("key", false);
 
-        jsonDynamoMapper.putItem(HKClass.class, instance);
+        jsonDynamoMapper.putItem(SimpleAnnotatedClass.class, instance);
 
         DynamoDBMapper mapper = new DynamoDBMapper(amazonDynamoDBClient);
 
-        HKClass restored = mapper.load(HKClass.class, "key");
+        SimpleAnnotatedClass restored = mapper.load(SimpleAnnotatedClass.class, "key");
 
         assertThat(restored).isEqualToComparingOnlyGivenFields(instance, "s", "b");
         assertThat(restored.getV()).isEqualTo(1);
+    }
+
+    @Test
+    public void freeBuiltPersistence() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
+
+        jsonDynamoMapper.putItem(SimpleFreeBuilt.class, instance);
     }
 
     /**
      * Example class with standard annotations; still supported.
      */
     @DynamoDBTable(tableName = "hk_class_annotated")
-    public static class HKClass {
+    public static class SimpleAnnotatedClass {
         private String s;
         private boolean b;
         @Nullable private Integer v;
 
-        public HKClass() {
+        public SimpleAnnotatedClass() {
         }
 
-        public HKClass(String s, boolean b) {
+        public SimpleAnnotatedClass(String s, boolean b) {
             this.s = s;
             this.b = b;
         }
@@ -119,11 +134,11 @@ public class TablePersistenceTest {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            HKClass hkClass = (HKClass) o;
+            SimpleAnnotatedClass simpleAnnotatedClass = (SimpleAnnotatedClass) o;
 
-            if (b != hkClass.b) return false;
-            if (s != null ? !s.equals(hkClass.s) : hkClass.s != null) return false;
-            return v != null ? v.equals(hkClass.v) : hkClass.v == null;
+            if (b != simpleAnnotatedClass.b) return false;
+            if (s != null ? !s.equals(simpleAnnotatedClass.s) : simpleAnnotatedClass.s != null) return false;
+            return v != null ? v.equals(simpleAnnotatedClass.v) : simpleAnnotatedClass.v == null;
 
         }
 
@@ -135,4 +150,5 @@ public class TablePersistenceTest {
             return result;
         }
     }
+
 }
