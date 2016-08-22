@@ -23,7 +23,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
 
 public class TablePersistenceTest {
     DynamoLocal dynamoLocal;
