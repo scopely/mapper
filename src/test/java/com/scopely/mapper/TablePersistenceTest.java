@@ -6,12 +6,16 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.aws.dynamo.local.DynamoLocal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +23,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 
 public class TablePersistenceTest {
     DynamoLocal dynamoLocal;
@@ -72,7 +77,7 @@ public class TablePersistenceTest {
     }
 
     @Test
-    public void freeBuiltPersistence() throws Exception {
+    public void simple_free_built_persists() throws Exception {
         dynamoLocal.createTable(ctr -> {
             ctr.setTableName("simple_free_built");
             ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
@@ -84,6 +89,59 @@ public class TablePersistenceTest {
         SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
 
         jsonDynamoMapper.putItem(SimpleFreeBuilt.class, instance);
+    }
+
+    @Test
+    public void simple_free_built_versionIncrements() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built_versioned");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        SimpleFreeBuiltVersioned instance =
+                new SimpleFreeBuiltVersioned.Builder()
+                        .setHashKey("hk")
+                        .setStringValue("val")
+                        .build();
+
+        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
+
+        GetItemResult item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
+                ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
+
+        assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("1"));
+
+        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class,
+                new SimpleFreeBuiltVersioned.Builder().setVersion(1).mergeFrom(instance).build());
+
+        item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
+                ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
+
+        assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("2"));
+    }
+
+    @Test(expected = ConditionalCheckFailedException.class)
+    public void simple_free_built_versionChecked() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built_versioned");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        SimpleFreeBuiltVersioned instance =
+                new SimpleFreeBuiltVersioned.Builder()
+                        .setHashKey("hk")
+                        .setStringValue("val")
+                        .build();
+
+        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
+
+        jsonDynamoMapper.putItem(SimpleFreeBuiltVersioned.class, instance);
     }
 
     /**

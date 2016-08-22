@@ -8,7 +8,9 @@ import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.ImmutableMap;
+import com.sun.istack.internal.NotNull;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Method;
@@ -16,7 +18,7 @@ import java.util.Map;
 
 public class JsonDynamoMapper {
     private AmazonDynamoDB amazonDynamoDB;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
 
     public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB) {
         this.amazonDynamoDB = amazonDynamoDB;
@@ -49,7 +51,7 @@ public class JsonDynamoMapper {
         return amazonDynamoDB.putItem(new PutItemRequest().withTableName(table).withItem(attributeValueMap));
     }
 
-    public PutItemResult putItem(JsonNode jsonNode, String table, String versionField) throws MappingException {
+    public PutItemResult putItem(JsonNode jsonNode, String table, @NotNull String versionField) throws MappingException {
         Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
 
         @Nullable AttributeValue currentVersion = attributeValueMap.get(versionField);
