@@ -45,8 +45,8 @@ bintray {
     pkg {
         repo = 'scopely-maven'
         userOrg = 'scopely-oss'
-        name = 'leanplum-java-sdk'
+        name = 'mapper'
         licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/scopely/leanplum-java-sdk.git'
+        vcsUrl = 'https://github.com/scopely/mapper.git'
     }
 }
