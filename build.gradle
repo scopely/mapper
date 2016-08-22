@@ -1,7 +1,12 @@
+plugins {
+    id "com.jfrog.bintray" version "1.1"
+}
+
 group 'com.scopely'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'maven'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -20,4 +25,28 @@ dependencies {
     testCompile 'org.assertj:assertj-core:3.5.2'
     testCompile 'pl.pragmatists:JUnitParams:1.0.5'
     testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+
+jar {
+    manifest {
+        attributes  'Implementation-Title': 'Mapper',
+                    'Implementation-Version': version
+    }
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER') ?: project.hasProperty('bintrayUser') ? project.bintrayUser : ''
+    key = System.getenv('BINTRAY_KEY') ?: project.hasProperty('bintrayKey') ? project.bintrayKey : ''
+    configurations = ['archives']
+
+    publish = true
+
+    pkg {
+        repo = 'scopely-maven'
+        userOrg = 'scopely-oss'
+        name = 'leanplum-java-sdk'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/scopely/leanplum-java-sdk.git'
+    }
 }
