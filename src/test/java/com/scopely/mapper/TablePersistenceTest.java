@@ -3,8 +3,10 @@ package com.scopely.mapper;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.ScanResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
@@ -21,7 +23,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -165,12 +168,75 @@ public class TablePersistenceTest {
 
     @Test
     public void load_hashAndRange_found() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
 
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("even cooler").build();
+
+        jsonDynamoMapper.save(har);
+
+        Optional<HashAndRange> found = jsonDynamoMapper.load(HashAndRange.class, "yo this is cool", "even cooler");
+
+        assertThat(found).hasValue(har);
     }
 
     @Test
     public void load_hashAndRange_notFound() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
 
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+        Optional<HashAndRange> found = jsonDynamoMapper.load(HashAndRange.class, "yo this is cool", "even cooler");
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    public void scan_pagination() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        for (int i = 0; i < 1000; i++) {
+            HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
+            jsonDynamoMapper.save(har);
+        }
+
+        List<HashAndRange> results = new ArrayList<>();
+
+        ScanResultPage<HashAndRange> scan = jsonDynamoMapper.scan(HashAndRange.class,
+                new DynamoDBScanExpression().withLimit(100));
+        results.addAll(scan.getResults());
+        assertThat(scan.getCount()).isGreaterThan(10);
+        assertThat(scan.getCount()).isLessThan(1000);
+        assertThat(scan.getLastEvaluatedKey()).isNotNull();
+        while (scan.getLastEvaluatedKey() != null) {
+            scan = jsonDynamoMapper.scan(HashAndRange.class,
+                    new DynamoDBScanExpression().withExclusiveStartKey(scan.getLastEvaluatedKey()));
+            results.addAll(scan.getResults());
+        }
+
+        assertThat(results).hasSize(1000);
     }
 
     /**

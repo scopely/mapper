@@ -3,16 +3,22 @@ package com.scopely.mapper;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.ScanResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nonnull;
@@ -20,6 +26,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -61,42 +68,6 @@ public class JsonDynamoMapper {
         return putItem(serialized, tableName);
     }
 
-    public PutItemResult putItem(JsonNode jsonNode, String table) throws MappingException {
-        Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
-        return amazonDynamoDB.putItem(new PutItemRequest().withTableName(table).withItem(attributeValueMap));
-    }
-
-    public PutItemResult putItem(JsonNode jsonNode, String table, @Nonnull String versionField) throws MappingException {
-        Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
-
-        @Nullable AttributeValue currentVersion = attributeValueMap.get(versionField);
-
-        PutItemRequest putItemRequest = new PutItemRequest()
-                .withTableName(table)
-                .withExpressionAttributeNames(ImmutableMap.of("#v", versionField));
-
-        if (currentVersion == null || currentVersion.getN() == null) {
-            putItemRequest = putItemRequest.withConditionExpression("attribute_not_exists(#v)");
-            ImmutableMap.Builder<String, AttributeValue> builder = new ImmutableMap.Builder<>();
-
-            attributeValueMap.entrySet()
-                    .stream()
-                    .filter(e -> !e.getKey().equals(versionField))
-                    .forEach(e -> builder.put(e.getKey(), e.getValue()));
-
-            builder.put(versionField, new AttributeValue().withN("1"));
-
-            attributeValueMap = builder.build();
-        } else {
-            putItemRequest = putItemRequest.withConditionExpression("#v = :vf")
-                    .withExpressionAttributeValues(ImmutableMap.of(":vf", new AttributeValue().withN(currentVersion.getN())));
-            int v = Integer.parseInt(currentVersion.getN());
-            currentVersion.setN(String.valueOf(v + 1));
-        }
-
-        return amazonDynamoDB.putItem(putItemRequest.withItem(attributeValueMap));
-    }
-
     public <T> Optional<T> load(Class<T> clazz, String hashKey) throws MappingException {
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)));
@@ -131,6 +102,68 @@ public class JsonDynamoMapper {
         } catch (IOException e) {
             throw new MappingException("Exception deserializing", e);
         }
+    }
+
+    public <T> ScanResultPage<T> scan(Class<T> clazz, DynamoDBScanExpression scanExpression) throws MappingException {
+        ScanResult scanResult = amazonDynamoDB.scan(scanRequestForScanExpression(scanExpression)
+                .withTableName(tableName(clazz)));
+
+        List<Map<String, AttributeValue>> items = scanResult.getItems();
+        ImmutableList.Builder<T> objectListBuilder = new ImmutableList.Builder<>();
+        for (Map<String, AttributeValue> item : items) {
+            ObjectNode converted = JsonNodeAttributeValueMapper.convert(item, objectMapper);
+            try {
+                objectListBuilder.add(objectMapper.readValue(converted.traverse(), clazz));
+            } catch (IOException e) {
+                throw new MappingException("Exception deserializing", e);
+            }
+        }
+
+        ScanResultPage<T> page = new ScanResultPage<>();
+        page.setConsumedCapacity(scanResult.getConsumedCapacity());
+        page.setCount(scanResult.getCount());
+        page.setScannedCount(scanResult.getScannedCount());
+        page.setLastEvaluatedKey(scanResult.getLastEvaluatedKey());
+        page.setResults(objectListBuilder.build());
+        return page;
+    }
+
+    @VisibleForTesting
+    PutItemResult putItem(JsonNode jsonNode, String table) throws MappingException {
+        Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
+        return amazonDynamoDB.putItem(new PutItemRequest().withTableName(table).withItem(attributeValueMap));
+    }
+
+    @VisibleForTesting
+    PutItemResult putItem(JsonNode jsonNode, String table, @Nonnull String versionField) throws MappingException {
+        Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
+
+        @Nullable AttributeValue currentVersion = attributeValueMap.get(versionField);
+
+        PutItemRequest putItemRequest = new PutItemRequest()
+                .withTableName(table)
+                .withExpressionAttributeNames(ImmutableMap.of("#v", versionField));
+
+        if (currentVersion == null || currentVersion.getN() == null) {
+            putItemRequest = putItemRequest.withConditionExpression("attribute_not_exists(#v)");
+            ImmutableMap.Builder<String, AttributeValue> builder = new ImmutableMap.Builder<>();
+
+            attributeValueMap.entrySet()
+                    .stream()
+                    .filter(e -> !e.getKey().equals(versionField))
+                    .forEach(e -> builder.put(e.getKey(), e.getValue()));
+
+            builder.put(versionField, new AttributeValue().withN("1"));
+
+            attributeValueMap = builder.build();
+        } else {
+            putItemRequest = putItemRequest.withConditionExpression("#v = :vf")
+                    .withExpressionAttributeValues(ImmutableMap.of(":vf", new AttributeValue().withN(currentVersion.getN())));
+            int v = Integer.parseInt(currentVersion.getN());
+            currentVersion.setN(String.valueOf(v + 1));
+        }
+
+        return amazonDynamoDB.putItem(putItemRequest.withItem(attributeValueMap));
     }
 
     private <T> String tableName(Class<T> clazz) throws MappingException {
@@ -193,5 +226,28 @@ public class JsonDynamoMapper {
             }
         }
         return null;
+    }
+
+    private static ScanRequest scanRequestForScanExpression(DynamoDBScanExpression scanExpression) {
+        ScanRequest scanRequest = new ScanRequest();
+
+        scanRequest.setIndexName(scanExpression.getIndexName());
+        scanRequest.setScanFilter(scanExpression.getScanFilter());
+        scanRequest.setLimit(scanExpression.getLimit());
+        scanRequest.setExclusiveStartKey(scanExpression.getExclusiveStartKey());
+        scanRequest.setTotalSegments(scanExpression.getTotalSegments());
+        scanRequest.setSegment(scanExpression.getSegment());
+        scanRequest.setConditionalOperator(scanExpression.getConditionalOperator());
+        scanRequest.setFilterExpression(scanExpression.getFilterExpression());
+        scanRequest.setExpressionAttributeNames(scanExpression
+                .getExpressionAttributeNames());
+        scanRequest.setExpressionAttributeValues(scanExpression
+                .getExpressionAttributeValues());
+        scanRequest.setSelect(scanExpression.getSelect());
+        scanRequest.setProjectionExpression(scanExpression.getProjectionExpression());
+        scanRequest.setReturnConsumedCapacity(scanExpression.getReturnConsumedCapacity());
+        scanRequest.setConsistentRead(scanExpression.isConsistentRead());
+
+        return scanRequest;
     }
 }
