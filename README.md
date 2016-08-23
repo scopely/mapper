@@ -22,7 +22,7 @@ repositories {
 
 ## Examples
 
-Mapper supports the version attribute for [optimistic locking](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBMapper.OptimisticLocking.html:
+Mapper supports the version attribute for [optimistic locking](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBMapper.OptimisticLocking.html):
 
 ```java
 @FreeBuilder
