@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +36,12 @@ public class JsonDynamoMapper {
         JsonNode serialized = objectMapper.valueToTree(item);
 
         Class<?> clazz = item.getClass();
+
+        if (clazz.getAnnotation(DynamoDBTable.class) == null) {
+            clazz = findAnnotatedInterface(clazz, DynamoDBTable.class)
+                    .orElseThrow(() ->
+                            new MappingException("Could not find annotated interface for provided class " + item.getClass()));
+        }
 
         String tableName = tableName(clazz);
 
@@ -164,5 +171,15 @@ public class JsonDynamoMapper {
         }
 
         return rangeKeyAnnotation.attributeName();
+    }
+
+    private <T> Optional<Class<?>> findAnnotatedInterface(Class<T> clazz, Class<? extends Annotation> annotationClass) {
+        for (Class<?> iface : clazz.getInterfaces()) {
+            if (iface.getAnnotation(annotationClass) != null) {
+                return Optional.of(iface);
+            }
+        }
+
+        return Optional.empty();
     }
 }
