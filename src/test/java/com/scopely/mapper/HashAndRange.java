@@ -1,17 +1,19 @@
 package com.scopely.mapper;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.inferred.freebuilder.FreeBuilder;
 
 @FreeBuilder
-@JsonDeserialize(builder = SimpleFreeBuilt.Builder.class)
-@DynamoDBTable(tableName = "simple_free_built")
-interface SimpleFreeBuilt {
+@JsonDeserialize(builder = HashAndRange.Builder.class)
+@DynamoDBTable(tableName = "hash_and_range")
+interface HashAndRange {
     @DynamoDBHashKey(attributeName = "hashKey")
     String getHashKey();
-    String getStringValue();
+    @DynamoDBRangeKey(attributeName = "rangeKey")
+    String getRangeKey();
 
-    class Builder extends SimpleFreeBuilt_Builder {}
+    class Builder extends HashAndRange_Builder {}
 }
