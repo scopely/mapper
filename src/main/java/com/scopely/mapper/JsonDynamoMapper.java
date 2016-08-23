@@ -30,6 +30,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * JsonDynamoMapper requires that all classes used with it can be safely round-tripped to JSON. In all cases, it
+ * first converts to JSON, then to the target class or to a DynamoDB record. When creating a DynamoDB record, nested
+ * objects will be converted into Map fields.
+ *
+ * There are some limitations to the mapping-- JSON supports arrays with mixed data types in their entries, while
+ * DynamoDB does not. JSON also supports arrays of objects, which DynamoDB does not. Such items will raise {@link MappingException}
+ * when saved to DynamoDB.
+ *
+ * This class does not implement all the DynamoDB methods-- additional methods taking a similar approach can be used
+ * by using the DynamoDB low-level API and then using {@link #convert(Class, Map)} and {@link #convert(Object)} to
+ * convert between the AttributeValue maps that the low-level API uses and the target class.
+ *
+ * In order to determine table name, hash key, and range key, the mapper traverses first the provided class, then its
+ * superclasses, then its interfaces, looking for a class annotated with {@link DynamoDBTable}. That class must
+ * have a method annotated with {@link DynamoDBHashKey} and, if the table has a range key, {@link DynamoDBRangeKey}.
+ * In processing all three annotations, the mapper uses the annotations' values to determine the target table and
+ * the object keys containing hash and range keys-- so the annotations must always be used with explicit `tableName`,
+ * `attributeName`, and `attributeName` arguments respectively.
+ */
 @SuppressWarnings("WeakerAccess")
 public class JsonDynamoMapper {
     private AmazonDynamoDB amazonDynamoDB;
@@ -76,13 +96,7 @@ public class JsonDynamoMapper {
             return Optional.empty();
         }
 
-        ObjectNode converted = JsonNodeAttributeValueMapper.convert(item.getItem(), objectMapper);
-
-        try {
-            return Optional.of(objectMapper.readValue(converted.traverse(), clazz));
-        } catch (IOException e) {
-            throw new MappingException("Exception deserializing", e);
-        }
+        return Optional.of(convert(clazz, item.getItem()));
     }
 
     public <T> Optional<T> load(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
@@ -95,28 +109,27 @@ public class JsonDynamoMapper {
             return Optional.empty();
         }
 
-        ObjectNode converted = JsonNodeAttributeValueMapper.convert(item.getItem(), objectMapper);
-
-        try {
-            return Optional.of(objectMapper.readValue(converted.traverse(), clazz));
-        } catch (IOException e) {
-            throw new MappingException("Exception deserializing", e);
-        }
+        return Optional.of(convert(clazz, item.getItem()));
     }
 
-    public <T> ScanResultPage<T> scan(Class<T> clazz, DynamoDBScanExpression scanExpression) throws MappingException {
+    public <T> ScanResultPage<T> scan(Class<T> clazz) throws MappingException {
+        return scan(clazz, new DynamoDBScanExpression());
+    }
+
+    /**
+     * Scan the table associated with specified class. All specifics of the scan should be specifed in the provided
+     * DynamoDBScanExpression
+     * @return includes last evaluated key, for pagination
+     * @throws MappingException On JSON errors or invalid class
+     */
+    public <T> ScanResultPage<T> scan(Class<T> clazz, @Nonnull DynamoDBScanExpression scanExpression) throws MappingException {
         ScanResult scanResult = amazonDynamoDB.scan(scanRequestForScanExpression(scanExpression)
                 .withTableName(tableName(clazz)));
 
         List<Map<String, AttributeValue>> items = scanResult.getItems();
         ImmutableList.Builder<T> objectListBuilder = new ImmutableList.Builder<>();
         for (Map<String, AttributeValue> item : items) {
-            ObjectNode converted = JsonNodeAttributeValueMapper.convert(item, objectMapper);
-            try {
-                objectListBuilder.add(objectMapper.readValue(converted.traverse(), clazz));
-            } catch (IOException e) {
-                throw new MappingException("Exception deserializing", e);
-            }
+            objectListBuilder.add(convert(clazz, item));
         }
 
         ScanResultPage<T> page = new ScanResultPage<>();
@@ -126,6 +139,28 @@ public class JsonDynamoMapper {
         page.setLastEvaluatedKey(scanResult.getLastEvaluatedKey());
         page.setResults(objectListBuilder.build());
         return page;
+    }
+
+    /**
+     * Basic method to convert a raw DynamoDB record (AttributeValue map) into an instance of a model class.
+     * @param clazz Class to deserialize into
+     * @param attributeValueMap Record contents from DynamoDB
+     * @return  Instance of the T; not-null
+     * @throws MappingException On JSON errors or illegal class
+     */
+    @Nonnull
+    public <T> T convert(Class<T> clazz, Map<String, AttributeValue> attributeValueMap) throws MappingException {
+        ObjectNode converted = JsonNodeAttributeValueMapper.convert(attributeValueMap, objectMapper);
+        try {
+            return objectMapper.readValue(converted.traverse(), clazz);
+        } catch (IOException e) {
+            throw new MappingException("Exception deserializing", e);
+        }
+    }
+
+    public <T> Map<String, AttributeValue> convert(T item) throws MappingException {
+        JsonNode serialized = objectMapper.valueToTree(item);
+        return JsonNodeAttributeValueMapper.convert(serialized);
     }
 
     @VisibleForTesting
