@@ -37,10 +37,11 @@ public class JsonDynamoMapper {
 
         Class<?> clazz = item.getClass();
 
-        if (clazz.getAnnotation(DynamoDBTable.class) == null) {
-            clazz = findAnnotatedInterface(clazz, DynamoDBTable.class)
-                    .orElseThrow(() ->
-                            new MappingException("Could not find annotated interface for provided class " + item.getClass()));
+        Class<?> annotatedClazz = findAnnotatedClass(clazz, DynamoDBTable.class);
+        if (annotatedClazz == null) {
+            throw new MappingException("Could not find annotated interface for provided class " + clazz);
+        } else {
+            clazz = annotatedClazz;
         }
 
         String tableName = tableName(clazz);
@@ -173,13 +174,24 @@ public class JsonDynamoMapper {
         return rangeKeyAnnotation.attributeName();
     }
 
-    private <T> Optional<Class<?>> findAnnotatedInterface(Class<T> clazz, Class<? extends Annotation> annotationClass) {
-        for (Class<?> iface : clazz.getInterfaces()) {
-            if (iface.getAnnotation(annotationClass) != null) {
-                return Optional.of(iface);
+    private <T> Class<?> findAnnotatedClass(Class<T> clazz, Class<? extends Annotation> annotationClass) {
+        if (clazz.getAnnotation(annotationClass) != null) {
+            return clazz;
+        }
+
+        Class<?> superClazz = clazz.getSuperclass();
+        if (superClazz != null) {
+            Class<?> found = findAnnotatedClass(superClazz, annotationClass);
+            if (found != null) {
+                return found;
             }
         }
 
-        return Optional.empty();
+        for (Class<?> iface : clazz.getInterfaces()) {
+            if (iface.getAnnotation(annotationClass) != null) {
+                return iface;
+            }
+        }
+        return null;
     }
 }
