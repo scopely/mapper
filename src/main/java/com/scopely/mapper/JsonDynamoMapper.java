@@ -20,9 +20,9 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -50,7 +50,7 @@ import java.util.Optional;
  * the object keys containing hash and range keys-- so the annotations must always be used with explicit `tableName`,
  * `attributeName`, and `attributeName` arguments respectively.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class JsonDynamoMapper {
     private AmazonDynamoDB amazonDynamoDB;
     private ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
@@ -122,7 +122,7 @@ public class JsonDynamoMapper {
      * @return includes last evaluated key, for pagination
      * @throws MappingException On JSON errors or invalid class
      */
-    public <T> ScanResultPage<T> scan(Class<T> clazz, @Nonnull DynamoDBScanExpression scanExpression) throws MappingException {
+    public <T> ScanResultPage<T> scan(Class<T> clazz, @NotNull DynamoDBScanExpression scanExpression) throws MappingException {
         ScanResult scanResult = amazonDynamoDB.scan(scanRequestForScanExpression(scanExpression)
                 .withTableName(tableName(clazz)));
 
@@ -148,7 +148,7 @@ public class JsonDynamoMapper {
      * @return  Instance of the T; not-null
      * @throws MappingException On JSON errors or illegal class
      */
-    @Nonnull
+    @NotNull
     public <T> T convert(Class<T> clazz, Map<String, AttributeValue> attributeValueMap) throws MappingException {
         ObjectNode converted = JsonNodeAttributeValueMapper.convert(attributeValueMap, objectMapper);
         try {
@@ -170,7 +170,7 @@ public class JsonDynamoMapper {
     }
 
     @VisibleForTesting
-    PutItemResult putItem(JsonNode jsonNode, String table, @Nonnull String versionField) throws MappingException {
+    PutItemResult putItem(JsonNode jsonNode, String table, @NotNull String versionField) throws MappingException {
         Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(jsonNode);
 
         @Nullable AttributeValue currentVersion = attributeValueMap.get(versionField);

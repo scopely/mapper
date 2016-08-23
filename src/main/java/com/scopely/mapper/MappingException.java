@@ -1,5 +1,6 @@
 package com.scopely.mapper;
 
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class MappingException extends Exception {
     /**
      * Constructs a new exception with {@code null} as its detail message.
