@@ -39,8 +39,7 @@ interface SimpleFreeBuiltVersioned {
 }
 ```
 
-Note that the example above also uses `Optional<T>` -- the optional is omitted from the JSON by Jackson, so it is safely
-round-tripped to DynamoDB.
+Note that the example above also uses `Optional<T>` -- empty optionals are omitted from the JSON by Jackson, so they are safely round-tripped to DynamoDB.
 
 Mapper also supports specifying a range key:
 
@@ -74,4 +73,4 @@ public <T> Map<String, AttributeValue> convert(T item) throws MappingException {
 ```
 
 The basics of `save`, `load` and `scan` are effectively the same as the built-in object mapper. More DynamoDB operations
-can be implemented by using the simple `convert` methods in conjunction the the [DynamoDB SDK's low-level API](http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/dynamodbv2/AmazonDynamoDBClient.html).
+can be implemented by using the simple `convert` methods in conjunction with the [DynamoDB SDK's low-level API](http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/dynamodbv2/AmazonDynamoDBClient.html).
