@@ -53,10 +53,15 @@ import java.util.Optional;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class JsonDynamoMapper {
     private AmazonDynamoDB amazonDynamoDB;
-    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    private ObjectMapper objectMapper;
 
     public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB) {
+        this(amazonDynamoDB, new ObjectMapper().registerModule(new Jdk8Module()));
+    }
+
+    public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB, ObjectMapper objectMapper) {
         this.amazonDynamoDB = amazonDynamoDB;
+        this.objectMapper = objectMapper;
     }
 
     public <T> PutItemResult save(T item) throws MappingException {
