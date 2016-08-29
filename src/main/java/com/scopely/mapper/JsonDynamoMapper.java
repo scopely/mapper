@@ -52,8 +52,8 @@ import java.util.Optional;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class JsonDynamoMapper {
-    private AmazonDynamoDB amazonDynamoDB;
-    private ObjectMapper objectMapper;
+    private final AmazonDynamoDB amazonDynamoDB;
+    private final ObjectMapper objectMapper;
 
     public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB) {
         this(amazonDynamoDB, new ObjectMapper().registerModule(new Jdk8Module()));
@@ -122,7 +122,7 @@ public class JsonDynamoMapper {
     }
 
     /**
-     * Scan the table associated with specified class. All specifics of the scan should be specifed in the provided
+     * Scan the table associated with specified class. All specifics of the scan should be specified in the provided
      * DynamoDBScanExpression
      * @return includes last evaluated key, for pagination
      * @throws MappingException On JSON errors or invalid class
