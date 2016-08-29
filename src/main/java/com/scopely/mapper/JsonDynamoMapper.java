@@ -163,7 +163,7 @@ public class JsonDynamoMapper {
         if (rangeKey == null || rangeKey.trim().isEmpty()) {
             throw new IllegalArgumentException("RangeKey can't be null or empty");
         }
-        
+
         amazonDynamoDB.deleteItem(tableName(clazz),
                 ImmutableMap.of(
                         hashKeyAttribute(clazz), new AttributeValue().withS(hashKey),
@@ -475,6 +475,7 @@ public class JsonDynamoMapper {
         queryRequest.setQueryFilter(queryExpr.getQueryFilter());
         queryRequest.setKeyConditionExpression(queryExpr.getKeyConditionExpression());
         queryRequest.setKeyConditions(queryExpr.getRangeKeyConditions());
+        queryRequest.setScanIndexForward(queryExpr.isScanIndexForward());
         queryRequest.setExpressionAttributeValues(queryExpr.getExpressionAttributeValues());
         queryRequest.setLimit(queryExpr.getLimit());
         queryRequest.setExclusiveStartKey(queryExpr.getExclusiveStartKey());
