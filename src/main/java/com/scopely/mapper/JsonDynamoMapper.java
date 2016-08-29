@@ -193,7 +193,6 @@ public class JsonDynamoMapper {
     /**
      * Scan the table associated with specified class. All specifics of the scan should be specified in the provided
      * DynamoDBScanExpression
-     * @return includes last evaluated key, for pagination
      * @throws MappingException On JSON errors or invalid class
      */
     public <T> ScanResultPage<T> scan(Class<T> clazz, @NotNull DynamoDBScanExpression scanExpression) throws MappingException {
@@ -216,9 +215,8 @@ public class JsonDynamoMapper {
     }
 
     /**
-     * Scan the table associated with specified class. All specifics of the scan should be specified in the provided
-     * DynamoDBScanExpression
-     * @return includes last evaluated key, for pagination
+     * Queries the table associated with specified class. All specifics of the scan should be specified in the provided
+     * DynamoDBQueryExpression
      * @throws MappingException On JSON errors or invalid class
      */
     public <T> List<T> queryAll(Class<T> clazz, @NotNull DynamoDBQueryExpression queryExpr) throws MappingException {
@@ -238,8 +236,8 @@ public class JsonDynamoMapper {
 
 
     /**
-     * Scan the table associated with specified class. All specifics of the scan should be specified in the provided
-     * DynamoDBScanExpression
+     * Queries the table associated with specified class. All specifics of the scan should be specified in the provided
+     * DynamoDBQueryExpression
      * @return includes last evaluated key, for pagination
      * @throws MappingException On JSON errors or invalid class
      */
@@ -265,9 +263,11 @@ public class JsonDynamoMapper {
 
     /**
      * Basic method to convert a raw DynamoDB record (AttributeValue map) into an instance of a model class.
-     * @param clazz Class to deserialize into
+     *
+     * @param clazz             Class to deserialize into
      * @param attributeValueMap Record contents from DynamoDB
-     * @return  Instance of the T; not-null
+     *
+     * @return Instance of the T; not-null
      * @throws MappingException On JSON errors or illegal class
      */
     @NotNull
@@ -276,7 +276,7 @@ public class JsonDynamoMapper {
         try {
             return objectMapper.readValue(converted.traverse(), clazz);
         } catch (IOException e) {
-            throw new MappingException("Exception deserializing", e);
+            throw new MappingException("Exception deserializing: " + converted, e);
         }
     }
 

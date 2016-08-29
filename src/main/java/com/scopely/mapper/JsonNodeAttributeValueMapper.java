@@ -42,7 +42,15 @@ public final class JsonNodeAttributeValueMapper {
             } else if (attributeValue.getN() != null) {
                 // Since Dynamo also has non-interpreted numerals, this should work
                 String numeric = attributeValue.getN();
-                root.put(entry.getKey(), new BigDecimal(numeric));
+                try {
+                    root.put(entry.getKey(), Integer.parseInt(numeric));
+                } catch (NumberFormatException e) {
+                    try {
+                        root.put(entry.getKey(), Long.parseLong(numeric));
+                    } catch (NumberFormatException e2) {
+                        root.put(entry.getKey(), new BigDecimal(numeric));
+                    }
+                }
             } else if (attributeValue.getM() != null) {
                 ObjectNode childNode = root.putObject(entry.getKey());
                 ObjectNode convertedMap = convert(attributeValue.getM(), objectMapper);
