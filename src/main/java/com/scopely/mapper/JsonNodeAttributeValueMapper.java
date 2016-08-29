@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,10 +51,20 @@ public final class JsonNodeAttributeValueMapper {
                 List<String> ss = attributeValue.getSS();
                 ArrayNode arrayNode = root.arrayNode(ss.size());
                 ss.forEach(arrayNode::add);
+                root.put(entry.getKey(), arrayNode);
             } else if (attributeValue.getNS() != null) {
                 List<String> ns = attributeValue.getNS();
                 ArrayNode arrayNode = root.arrayNode(ns.size());
                 ns.forEach(n -> arrayNode.add(new BigDecimal(n)));
+                root.put(entry.getKey(), arrayNode);
+            } else if (attributeValue.getL() != null) {
+                List<AttributeValue> l = attributeValue.getL();
+                ArrayNode arrayNode = root.arrayNode(l.size());
+                for (AttributeValue av : l) {
+                    ObjectNode convert = convert(av.getM(), objectMapper);
+                    arrayNode.add(convert);
+                }
+                root.put(entry.getKey(), arrayNode);
             } else {
                 throw new MappingException(String.format("Couldn't interpret %s => %s", entry.getKey(), entry.getValue()));
             }
@@ -62,7 +73,7 @@ public final class JsonNodeAttributeValueMapper {
         return root;
     }
 
-    private static AttributeValue makeAV(JsonNode node) throws MappingException {
+    private static Optional<AttributeValue> makeAV(JsonNode node) throws MappingException {
         JsonNodeType nodeType = node.getNodeType();
 
         AttributeValue attributeValue = new AttributeValue();
@@ -70,22 +81,21 @@ public final class JsonNodeAttributeValueMapper {
         switch (nodeType) {
             case NULL:
                 attributeValue.setNULL(true);
-                return attributeValue;
+                return Optional.of(attributeValue);
             case BOOLEAN:
                 attributeValue.setBOOL(node.asBoolean());
-                return attributeValue;
+                return Optional.of(attributeValue);
             case STRING:
                 attributeValue.setS(node.asText());
-                return attributeValue;
+                return Optional.of(attributeValue);
             case NUMBER:
                 attributeValue.setN(node.asText());
-                return attributeValue;
+                return Optional.of(attributeValue);
             case OBJECT:
                 attributeValue.setM(makeAVMapForObject(node));
-                return attributeValue;
+                return Optional.of(attributeValue);
             case ARRAY:
-                setAVForArray(node, attributeValue);
-                return attributeValue;
+                return setAVForArray(node, attributeValue);
             case MISSING:
             case BINARY:
             default:
@@ -93,8 +103,12 @@ public final class JsonNodeAttributeValueMapper {
         }
     }
 
-    private static AttributeValue setAVForArray(JsonNode node, AttributeValue value) throws MappingException {
+    private static Optional<AttributeValue> setAVForArray(JsonNode node, AttributeValue value) throws MappingException {
         ImmutableList<JsonNode> jsonNodes = ImmutableList.copyOf(node.elements());
+
+        if (jsonNodes.isEmpty()) {
+            return Optional.empty();
+        }
 
         Set<JsonNodeType> types = jsonNodes.stream().map(JsonNode::getNodeType).collect(Collectors.toSet());
 
@@ -107,10 +121,17 @@ public final class JsonNodeAttributeValueMapper {
         switch (type) {
             case STRING:
                 value.setSS(jsonNodes.stream().map(JsonNode::asText).collect(Collectors.toList()));
-                return value;
+                return Optional.of(value);
             case NUMBER:
                 value.setNS(jsonNodes.stream().map(JsonNode::asText).collect(Collectors.toList()));
-                return value;
+                return Optional.of(value);
+            case OBJECT:
+                ImmutableList.Builder<AttributeValue> list = ImmutableList.builder();
+                for (JsonNode jsonNode : jsonNodes) {
+                    list.add(new AttributeValue().withM(makeAVMapForObject(jsonNode)));
+                }
+                value.setL(list.build());
+                return Optional.of(value);
             default:
                 throw new MappingException("Unsupported list type " + type);
         }
@@ -122,7 +143,10 @@ public final class JsonNodeAttributeValueMapper {
         Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> entry = fields.next();
-            builder.put(entry.getKey(), makeAV(entry.getValue()));
+            Optional<AttributeValue> attributeValue = makeAV(entry.getValue());
+            if (attributeValue.isPresent()) {
+                builder.put(entry.getKey(), attributeValue.get());
+            }
         }
 
         return builder.build();

@@ -3,9 +3,11 @@ package com.scopely.mapper;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.datamodeling.ScanResultPage;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -19,15 +21,17 @@ import com.aws.dynamo.local.DynamoLocal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,7 +47,7 @@ public class TablePersistenceTest {
         dynamoLocal.start();
         amazonDynamoDBClient = dynamoLocal.buildDynamoClient();
     }
-    
+
     @After
     public void tearDown() throws Exception {
         dynamoLocal.stop();
@@ -100,6 +104,9 @@ public class TablePersistenceTest {
         SimpleFreeBuilt item = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").get();
 
         assertThat(item).isEqualToComparingFieldByField(instance);
+
+        jsonDynamoMapper.delete(SimpleFreeBuilt.class, "hk");
+        assertThat(jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").isPresent()).isFalse();
     }
 
     @Test
@@ -130,6 +137,72 @@ public class TablePersistenceTest {
         SimpleFreeBuiltVersioned retrieved = jsonDynamoMapper.load(SimpleFreeBuiltVersioned.class, "hk").get();
 
         assertThat(retrieved.getVersion()).hasValue(2);
+    }
+
+    @Test
+    public void simple_free_built_innerDocument() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built_versioned");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        ImmutableList<InnerDocument> innerDocuments = ImmutableList.of(
+                new InnerDocument.Builder().setRequiredInnerValue("value1").build(),
+                new InnerDocument.Builder().setRequiredInnerValue("value2").setOptionalRequiredValue(42).build()
+        );
+
+        SimpleFreeBuiltVersioned instance =
+                new SimpleFreeBuiltVersioned.Builder()
+                        .setHashKey("hk")
+                        .setStringValue("val")
+                        .addAllInnerDocuments(innerDocuments)
+                        .build();
+
+        jsonDynamoMapper.save(instance);
+
+        GetItemResult item = amazonDynamoDBClient.getItem("simple_free_built_versioned",
+                ImmutableMap.of("hashKey", new AttributeValue().withS("hk")));
+
+        assertThat(item.getItem()).containsEntry("version", new AttributeValue().withN("1"));
+
+        jsonDynamoMapper.save(new SimpleFreeBuiltVersioned.Builder().setVersion(1).mergeFrom(instance).build());
+
+        SimpleFreeBuiltVersioned retrieved = jsonDynamoMapper.load(SimpleFreeBuiltVersioned.class, "hk").get();
+
+        assertThat(retrieved.getVersion()).hasValue(2);
+    }
+
+    @Test
+    public void free_built_with_lists() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("free_built_with_lists");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        ImmutableList<InnerDocument> innerDocuments = ImmutableList.of(
+                new InnerDocument.Builder().setRequiredInnerValue("value1").build(),
+                new InnerDocument.Builder().setRequiredInnerValue("value2").setOptionalRequiredValue(42).build()
+        );
+
+        FreeBuiltWithLists instance =
+                new FreeBuiltWithLists.Builder()
+                        .setHashKey("hk")
+                        .addAllDoubleList(ImmutableList.of(42.0, 52.0))
+                        .addAllStringList(Collections.singletonList("fus-ro-dah"))
+                        .build();
+
+        FreeBuiltWithLists saved = jsonDynamoMapper.saveAndGet(instance);
+        assertThat(saved).isEqualTo(instance);
+
+        FreeBuiltWithLists retrieved = jsonDynamoMapper.load(FreeBuiltWithLists.class, "hk").get();
+
+        assertThat(retrieved).isEqualTo(instance);
     }
 
     @Test(expected = ConditionalCheckFailedException.class)
@@ -188,6 +261,9 @@ public class TablePersistenceTest {
         Optional<HashAndRange> found = jsonDynamoMapper.load(HashAndRange.class, "yo this is cool", "even cooler");
 
         assertThat(found).hasValue(har);
+
+        jsonDynamoMapper.delete(HashAndRange.class, "yo this is cool", "even cooler");
+        assertThat(jsonDynamoMapper.load(HashAndRange.class, "yo this is cool", "even cooler").isPresent()).isFalse();
     }
 
     @Test
@@ -298,6 +374,101 @@ public class TablePersistenceTest {
         }
 
         assertThat(results).hasSize(1000);
+    }
+
+    @Test
+    public void scan_all() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        for (int i = 0; i < 1000; i++) {
+            HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
+            jsonDynamoMapper.save(har);
+        }
+
+        List<HashAndRange> scan = jsonDynamoMapper.scanAll(HashAndRange.class);
+        assertThat(scan).hasSize(1000);
+    }
+
+    @Test
+    public void query_pagination() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(
+                    new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        for (int i = 0; i < 1000; i++) {
+            HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
+            jsonDynamoMapper.save(har);
+        }
+
+        List<HashAndRange> results = new ArrayList<>();
+
+        QueryResultPage<HashAndRange> query = jsonDynamoMapper
+                .query(HashAndRange.class,
+                       new DynamoDBQueryExpression()
+                               .withKeyConditionExpression("hashKey = :hashKey")
+                               .withExpressionAttributeValues(ImmutableMap.of(":hashKey", new AttributeValue("yo this is cool")))
+                               .withLimit(100));
+        results.addAll(query.getResults());
+        assertThat(query.getCount()).isGreaterThan(10);
+        assertThat(query.getCount()).isLessThan(1000);
+        assertThat(query.getLastEvaluatedKey()).isNotNull();
+        while (query.getLastEvaluatedKey() != null) {
+            query = jsonDynamoMapper.query(
+                    HashAndRange.class,
+                    new DynamoDBQueryExpression()
+                            .withKeyConditionExpression("hashKey = :hashKey")
+                            .withExpressionAttributeValues(ImmutableMap.of(":hashKey", new AttributeValue("yo this is cool")))
+                            .withExclusiveStartKey(query.getLastEvaluatedKey()));
+            results.addAll(query.getResults());
+        }
+
+        assertThat(results).hasSize(1000);
+    }
+
+    @Test
+    public void query_all() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(
+                    new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        for (int i = 0; i < 1000; i++) {
+            HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
+            jsonDynamoMapper.save(har);
+        }
+
+        List<HashAndRange> results = new ArrayList<>();
+
+        List<HashAndRange> query = jsonDynamoMapper
+                .queryAll(HashAndRange.class,
+                       new DynamoDBQueryExpression()
+                               .withKeyConditionExpression("hashKey = :hashKey")
+                               .withExpressionAttributeValues(ImmutableMap.of(":hashKey", new AttributeValue("yo this is cool"))));
+        assertThat(query).hasSize(1000);
     }
 
     /**

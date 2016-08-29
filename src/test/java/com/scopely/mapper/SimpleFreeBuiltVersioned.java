@@ -4,8 +4,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 import org.inferred.freebuilder.FreeBuilder;
 
+import java.util.List;
 import java.util.Optional;
 
 @FreeBuilder
@@ -17,6 +19,8 @@ interface SimpleFreeBuiltVersioned {
     String getStringValue();
     @DynamoDBVersionAttribute(attributeName = "version")
     Optional<Integer> getVersion();
+
+    List<InnerDocument> getInnerDocuments();
 
     class Builder extends SimpleFreeBuiltVersioned_Builder {}
 }
