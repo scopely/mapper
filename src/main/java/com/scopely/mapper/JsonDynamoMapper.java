@@ -114,6 +114,10 @@ public class JsonDynamoMapper {
     }
 
     public <T> Optional<T> load(Class<T> clazz, String hashKey) throws MappingException {
+        if (hashKey == null || hashKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("HashKey can't be null or empty");
+        }
+
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)));
 
@@ -125,6 +129,14 @@ public class JsonDynamoMapper {
     }
 
     public <T> Optional<T> load(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
+        if (hashKey == null || hashKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("HashKey can't be null or empty");
+        }
+
+        if (rangeKey == null || rangeKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("RangeKey can't be null or empty");
+        }
+
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(
                         hashKeyAttribute(clazz), new AttributeValue().withS(hashKey),
@@ -138,12 +150,20 @@ public class JsonDynamoMapper {
     }
 
     public <T> void delete(Class<T> clazz, String hashKey) throws MappingException {
+        if (hashKey == null || hashKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("HashKey can't be null or empty");
+        }
+
         amazonDynamoDB.deleteItem(
                 tableName(clazz),
                 ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)));
     }
 
     public <T> void delete(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
+        if (rangeKey == null || rangeKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("RangeKey can't be null or empty");
+        }
+        
         amazonDynamoDB.deleteItem(tableName(clazz),
                 ImmutableMap.of(
                         hashKeyAttribute(clazz), new AttributeValue().withS(hashKey),
