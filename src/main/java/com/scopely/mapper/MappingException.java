@@ -1,7 +1,7 @@
 package com.scopely.mapper;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class MappingException extends Exception {
+public class MappingException extends RuntimeException {
     /**
      * Constructs a new exception with {@code null} as its detail message.
      * The cause is not initialized, and may subsequently be initialized by a
@@ -35,7 +35,6 @@ public class MappingException extends Exception {
      *                {@link #getCause()} method).  (A <tt>null</tt> value is
      *                permitted, and indicates that the cause is nonexistent or
      *                unknown.)
-     * @since 1.4
      */
     public MappingException(String message, Throwable cause) {
         super(message, cause);
