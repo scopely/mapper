@@ -110,6 +110,35 @@ public class TablePersistenceTest {
     }
 
     @Test
+    public void simple_free_built_persists_emtpy_string() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+
+        SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("").build();
+
+        jsonDynamoMapper.save(instance);
+
+        SimpleFreeBuilt item = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").get();
+
+        assertThat(item.getStringValue()).isNull();
+
+        SimpleFreeBuilt updatedInstance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
+        jsonDynamoMapper.save(updatedInstance);
+
+        SimpleFreeBuilt updatedItem = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").get();
+
+        assertThat(updatedItem).isEqualToComparingFieldByField(updatedInstance);
+
+        jsonDynamoMapper.delete(SimpleFreeBuilt.class, "hk");
+        assertThat(jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk").isPresent()).isFalse();
+    }
+
+    @Test
     public void simple_free_built_versionIncrements() throws Exception {
         dynamoLocal.createTable(ctr -> {
             ctr.setTableName("simple_free_built_versioned");

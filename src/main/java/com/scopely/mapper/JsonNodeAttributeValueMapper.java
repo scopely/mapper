@@ -94,7 +94,11 @@ public final class JsonNodeAttributeValueMapper {
                 attributeValue.setBOOL(node.asBoolean());
                 return Optional.of(attributeValue);
             case STRING:
-                attributeValue.setS(node.asText());
+                if (node.asText().isEmpty()) {
+                    attributeValue.setNULL(true);
+                } else {
+                    attributeValue.setS(node.asText());
+                }
                 return Optional.of(attributeValue);
             case NUMBER:
                 attributeValue.setN(node.asText());
