@@ -1,6 +1,6 @@
 language: java
 script:
-  - "./gradlew check --stacktrace"
+  - "./gradlew check --stacktrace --debug"
 after_success:
   - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./gradlew bintrayUpload
 jdk:
