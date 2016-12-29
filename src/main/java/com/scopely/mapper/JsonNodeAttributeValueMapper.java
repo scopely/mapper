@@ -48,11 +48,11 @@ public final class JsonNodeAttributeValueMapper {
                 childNode.setAll(convertedMap);
             } else if (attributeValue.getSS() != null) {
                 List<String> ss = attributeValue.getSS();
-                ArrayNode arrayNode = root.arrayNode(ss.size());
+                ArrayNode arrayNode = root.arrayNode();
                 ss.forEach(arrayNode::add);
             } else if (attributeValue.getNS() != null) {
                 List<String> ns = attributeValue.getNS();
-                ArrayNode arrayNode = root.arrayNode(ns.size());
+                ArrayNode arrayNode = root.arrayNode();
                 ns.forEach(n -> arrayNode.add(new BigDecimal(n)));
             } else {
                 throw new MappingException(String.format("Couldn't interpret %s => %s", entry.getKey(), entry.getValue()));

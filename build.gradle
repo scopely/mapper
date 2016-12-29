@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     compile "com.amazonaws:aws-java-sdk-dynamodb:1.11.28"
-    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.1'
+    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.6'
     compile 'com.google.guava:guava:19.0'
     compile 'org.jetbrains:annotations:15.0'
     testCompile 'org.inferred:freebuilder:1.10.4'
