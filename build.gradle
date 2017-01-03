@@ -51,3 +51,8 @@ bintray {
         vcsUrl = 'https://github.com/scopely/mapper.git'
     }
 }
+
+
+test {
+    maxHeapSize = "1g"
+}
