@@ -57,22 +57,22 @@ public final class JsonNodeAttributeValueMapper {
                 childNode.setAll(convertedMap);
             } else if (attributeValue.getSS() != null) {
                 List<String> ss = attributeValue.getSS();
-                ArrayNode arrayNode = root.arrayNode(ss.size());
+                ArrayNode arrayNode = root.arrayNode();
                 ss.forEach(arrayNode::add);
                 root.put(entry.getKey(), arrayNode);
             } else if (attributeValue.getNS() != null) {
                 List<String> ns = attributeValue.getNS();
-                ArrayNode arrayNode = root.arrayNode(ns.size());
+                ArrayNode arrayNode = root.arrayNode();
                 ns.forEach(n -> arrayNode.add(new BigDecimal(n)));
-                root.put(entry.getKey(), arrayNode);
+                root.set(entry.getKey(), arrayNode);
             } else if (attributeValue.getL() != null) {
                 List<AttributeValue> l = attributeValue.getL();
-                ArrayNode arrayNode = root.arrayNode(l.size());
+                ArrayNode arrayNode = root.arrayNode();
                 for (AttributeValue av : l) {
                     ObjectNode convert = convert(av.getM(), objectMapper);
                     arrayNode.add(convert);
                 }
-                root.put(entry.getKey(), arrayNode);
+                root.set(entry.getKey(), arrayNode);
             } else {
                 throw new MappingException(String.format("Couldn't interpret %s => %s", entry.getKey(), entry.getValue()));
             }
