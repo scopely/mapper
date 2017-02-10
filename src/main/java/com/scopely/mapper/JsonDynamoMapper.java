@@ -114,12 +114,17 @@ public class JsonDynamoMapper {
     }
 
     public <T> Optional<T> load(Class<T> clazz, String hashKey) throws MappingException {
+        return load(clazz, hashKey, true);
+    }
+
+    public <T> Optional<T> load(Class<T> clazz, String hashKey, boolean consistentRead) throws MappingException {
         if (hashKey == null || hashKey.trim().isEmpty()) {
             throw new IllegalArgumentException("HashKey can't be null or empty");
         }
 
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
-                ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)));
+                ImmutableMap.of(hashKeyAttribute(clazz), new AttributeValue().withS(hashKey)),
+                consistentRead);
 
         if (item.getItem() == null) {
             return Optional.empty();
@@ -129,6 +134,11 @@ public class JsonDynamoMapper {
     }
 
     public <T> Optional<T> load(Class<T> clazz, String hashKey, String rangeKey) throws MappingException {
+        return load(clazz, hashKey, rangeKey, true);
+
+    }
+
+    public <T> Optional<T> load(Class<T> clazz, String hashKey, String rangeKey, boolean consistentRead) throws MappingException {
         if (hashKey == null || hashKey.trim().isEmpty()) {
             throw new IllegalArgumentException("HashKey can't be null or empty");
         }
@@ -140,7 +150,8 @@ public class JsonDynamoMapper {
         GetItemResult item = amazonDynamoDB.getItem(tableName(clazz),
                 ImmutableMap.of(
                         hashKeyAttribute(clazz), new AttributeValue().withS(hashKey),
-                        rangeKeyAttribute(clazz), new AttributeValue().withS(rangeKey)));
+                        rangeKeyAttribute(clazz), new AttributeValue().withS(rangeKey)),
+                consistentRead);
 
         if (item.getItem() == null) {
             return Optional.empty();
