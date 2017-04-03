@@ -39,7 +39,9 @@ public final class JsonNodeAttributeValueMapper {
                 root.put(entry.getKey(), attributeValue.getBOOL());
             } else if (attributeValue.getS() != null) {
                 root.put(entry.getKey(), attributeValue.getS());
-            } else if (attributeValue.getN() != null) {
+            } else if (attributeValue.getB() != null) {
+                root.put(entry.getKey(), attributeValue.getB().array());
+            }else if (attributeValue.getN() != null) {
                 // Since Dynamo also has non-interpreted numerals, this should work
                 String numeric = attributeValue.getN();
                 try {
