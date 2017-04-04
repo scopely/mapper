@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +114,12 @@ public final class JsonNodeAttributeValueMapper {
                 return setAVForArray(node, attributeValue);
             case MISSING:
             case BINARY:
+                try {
+                    attributeValue.setB(ByteBuffer.wrap(node.binaryValue()));
+                    return Optional.of(attributeValue);
+                } catch (IOException e) {
+                    throw new MappingException("Binary node exception");
+                }
             default:
                 throw new MappingException("Unsupported exception " + nodeType);
         }
