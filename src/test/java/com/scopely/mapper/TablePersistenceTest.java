@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -498,6 +499,29 @@ public class TablePersistenceTest {
                                .withKeyConditionExpression("hashKey = :hashKey")
                                .withExpressionAttributeValues(ImmutableMap.of(":hashKey", new AttributeValue("yo this is cool"))));
         assertThat(query).hasSize(1000);
+    }
+
+    @Test
+    public void simple_free_built_binary_persists() throws Exception {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("simple_free_built_with_binary");
+            ctr.setKeySchema(ImmutableList.of(new KeySchemaElement("hashKey", KeyType.HASH)));
+            ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+        ByteBuffer bb = ByteBuffer.wrap("val".getBytes());
+        SimpleFreeBuiltWithBinaryAttribute instance = new SimpleFreeBuiltWithBinaryAttribute.Builder()
+                                                    .setHashKey("hk").setByteBufferValue(bb).build();
+
+        jsonDynamoMapper.save(instance);
+
+        SimpleFreeBuiltWithBinaryAttribute item = jsonDynamoMapper.load(SimpleFreeBuiltWithBinaryAttribute.class, "hk").get();
+
+        assertThat(item).isEqualToComparingFieldByField(instance);
+
+        jsonDynamoMapper.delete(SimpleFreeBuiltWithBinaryAttribute.class, "hk");
+        assertThat(jsonDynamoMapper.load(SimpleFreeBuiltWithBinaryAttribute.class, "hk").isPresent()).isFalse();
     }
 
     /**
