@@ -112,7 +112,6 @@ public final class JsonNodeAttributeValueMapper {
                 return Optional.of(attributeValue);
             case ARRAY:
                 return setAVForArray(node, attributeValue);
-            case MISSING:
             case BINARY:
                 try {
                     attributeValue.setB(ByteBuffer.wrap(node.binaryValue()));
@@ -120,6 +119,7 @@ public final class JsonNodeAttributeValueMapper {
                 } catch (IOException e) {
                     throw new MappingException("Binary node exception");
                 }
+            case MISSING:
             default:
                 throw new MappingException("Unsupported exception " + nodeType);
         }
