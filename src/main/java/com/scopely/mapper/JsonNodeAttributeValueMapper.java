@@ -117,7 +117,7 @@ public final class JsonNodeAttributeValueMapper {
                     attributeValue.setB(ByteBuffer.wrap(node.binaryValue()));
                     return Optional.of(attributeValue);
                 } catch (IOException e) {
-                    throw new MappingException("Binary node exception");
+                    throw new MappingException("Binary node exception", e);
                 }
             case MISSING:
             default:

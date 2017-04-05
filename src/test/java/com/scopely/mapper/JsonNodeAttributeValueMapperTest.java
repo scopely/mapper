@@ -30,8 +30,8 @@ public class JsonNodeAttributeValueMapperTest {
     public void convertBinaryToMap() throws Exception {
         ObjectNode node = new ObjectMapper().createObjectNode();
         String base64BinaryInfo = "12345=";
-        node.put("key", ByteBuffer.wrap(base64BinaryInfo.getBytes()).array());
-        AttributeValue attributeValue = new AttributeValue().withB(ByteBuffer.wrap(base64BinaryInfo.getBytes()));
+        node.put("key", ByteBuffer.wrap(base64BinaryInfo.getBytes("UTF-8")).array());
+        AttributeValue attributeValue = new AttributeValue().withB(ByteBuffer.wrap(base64BinaryInfo.getBytes("UTF-8")));
         Map<String, AttributeValue> attributeValueMap = JsonNodeAttributeValueMapper.convert(node);
         assertThat(attributeValueMap.get("key")).isEqualTo(attributeValue);
     }
@@ -39,7 +39,7 @@ public class JsonNodeAttributeValueMapperTest {
     @Test
     public void convertBinaryFromMap() throws Exception {
         String base64BinaryInfo = "12345=";
-        Map<String, AttributeValue> map = ImmutableMap.of("key", new AttributeValue().withB(ByteBuffer.wrap(base64BinaryInfo.getBytes())));
+        Map<String, AttributeValue> map = ImmutableMap.of("key", new AttributeValue().withB(ByteBuffer.wrap(base64BinaryInfo.getBytes("UTF-8"))));
         ObjectNode node = JsonNodeAttributeValueMapper.convert(map, new ObjectMapper());
         assertThat(node.get("key").binaryValue()).isEqualTo(map.get("key").getB().array());
     }
