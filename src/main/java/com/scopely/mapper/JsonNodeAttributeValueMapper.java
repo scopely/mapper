@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,8 @@ public final class JsonNodeAttributeValueMapper {
                 root.put(entry.getKey(), attributeValue.getBOOL());
             } else if (attributeValue.getS() != null) {
                 root.put(entry.getKey(), attributeValue.getS());
+            } else if (attributeValue.getB() != null) {
+                root.put(entry.getKey(), attributeValue.getB().array());
             } else if (attributeValue.getN() != null) {
                 // Since Dynamo also has non-interpreted numerals, this should work
                 String numeric = attributeValue.getN();
@@ -108,8 +112,14 @@ public final class JsonNodeAttributeValueMapper {
                 return Optional.of(attributeValue);
             case ARRAY:
                 return setAVForArray(node, attributeValue);
-            case MISSING:
             case BINARY:
+                try {
+                    attributeValue.setB(ByteBuffer.wrap(node.binaryValue()));
+                    return Optional.of(attributeValue);
+                } catch (IOException e) {
+                    throw new MappingException("Binary node exception", e);
+                }
+            case MISSING:
             default:
                 throw new MappingException("Unsupported exception " + nodeType);
         }
