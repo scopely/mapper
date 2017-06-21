@@ -1,5 +1,6 @@
 plugins {
     id "com.jfrog.bintray" version "1.1"
+    id "org.inferred.processors" version "1.2.12"
 }
 
 group 'com.scopely'
@@ -12,11 +13,18 @@ targetCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
     jcenter()
+    maven {
+        url 'https://plugins.gradle.org/m2/'
+    }
     maven { url "https://jitpack.io" }
 }
 
 
 dependencies {
+    processor 'org.inferred:freebuilder:1.14.1'
+
+    testCompile 'org.inferred:freebuilder:1.14.1'
+
     compile "com.amazonaws:aws-java-sdk-dynamodb:1.11.28"
     // This version must match the version of Jackson used by the AWS SDK
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.6'
