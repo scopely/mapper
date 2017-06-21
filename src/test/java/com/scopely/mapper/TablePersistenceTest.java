@@ -38,9 +38,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SuppressWarnings("ALL")
 public class TablePersistenceTest {
-    DynamoLocal dynamoLocal;
-    AmazonDynamoDBClient amazonDynamoDBClient;
-    ObjectMapper objectMapper = new ObjectMapper();
+    private DynamoLocal dynamoLocal;
+    private AmazonDynamoDBClient amazonDynamoDBClient;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Before
     public void setUp() throws Exception {
