@@ -1,4 +1,7 @@
 # mapper
+
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/cc345a4d4bee459fa916c5ef3a7c6985)](https://www.codacy.com/app/avram/mapper?utm_source=github.com&utm_medium=referral&utm_content=scopely/mapper&utm_campaign=badger)
+
 Simplified and simple usage of DynamoDB. Mapper assumes you've already defined reasonable marshaling of your class
 to and from JSON, and simply persists objects to DynamoDB tables as records with structure that reflects the objects'
 JSON representation.
