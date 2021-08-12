@@ -76,13 +76,13 @@ public class JsonDynamoMapper {
     private final DynamoDB dynamoDB;
     private final ObjectMapper objectMapper;
 
-    public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB) {
-        this(amazonDynamoDB, new ObjectMapper().registerModule(new Jdk8Module()));
+    public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB, DynamoDB dynamoDb) {
+        this(amazonDynamoDB, dynamoDb, new ObjectMapper().registerModule(new Jdk8Module()));
     }
 
-    public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB, ObjectMapper objectMapper) {
+    public JsonDynamoMapper(AmazonDynamoDB amazonDynamoDB, DynamoDB dynamoDb, ObjectMapper objectMapper) {
         this.amazonDynamoDB = amazonDynamoDB;
-        this.dynamoDB = new DynamoDB(amazonDynamoDB);
+        this.dynamoDB = dynamoDb;
         this.objectMapper = objectMapper;
     }
 
