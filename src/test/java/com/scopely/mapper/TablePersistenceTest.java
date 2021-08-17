@@ -66,7 +66,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hk", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
         jsonDynamoMapper.putItem(objectMapper.readTree("{\"hk\": \"value\"}"), "hk_only", Collections.emptyList());
     }
 
@@ -78,7 +78,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("s", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         SimpleAnnotatedClass instance = new SimpleAnnotatedClass("key", false);
 
@@ -100,7 +100,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("val").build();
 
@@ -122,7 +122,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         SimpleFreeBuilt instance = new SimpleFreeBuilt.Builder().setHashKey("hk").setStringValue("").build();
 
@@ -151,7 +151,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         SimpleFreeBuiltVersioned instance =
                 new SimpleFreeBuiltVersioned.Builder()
@@ -181,7 +181,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         ImmutableList<InnerDocument> innerDocuments = ImmutableList.of(
                 new InnerDocument.Builder().setRequiredInnerValue("value1").build(),
@@ -217,7 +217,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         ImmutableList<InnerDocument> innerDocuments = ImmutableList.of(
                 new InnerDocument.Builder().setRequiredInnerValue("value1").build(),
@@ -247,7 +247,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         SimpleFreeBuiltVersioned instance =
                 new SimpleFreeBuiltVersioned.Builder()
@@ -268,7 +268,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         Optional<SimpleFreeBuilt> loaded = jsonDynamoMapper.load(SimpleFreeBuilt.class, "hk");
 
@@ -286,7 +286,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("even cooler").build();
 
@@ -311,7 +311,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey(null).build();
 
@@ -337,7 +337,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         HashAndOptionalRange har = new HashAndOptionalRange.Builder().setHashKey("yo this is cool").build();
 
@@ -354,7 +354,7 @@ public class TablePersistenceTest {
 
     @Test(expected = MappingException.class)
     public void invalidAutoGeneratedOptionalType() throws Exception {
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
         InvalidRange har = new InvalidRange.Builder().setHashKey("yo this is cool").build();
         jsonDynamoMapper.save(har);
     }
@@ -370,7 +370,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
         Optional<HashAndRange> found = jsonDynamoMapper.load(HashAndRange.class, "yo this is cool", "even cooler");
         assertThat(found).isEmpty();
     }
@@ -386,7 +386,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         for (int i = 0; i < 1000; i++) {
             HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
@@ -421,7 +421,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         for (int i = 0; i < 1000; i++) {
             HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
@@ -444,7 +444,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         for (int i = 0; i < 1000; i++) {
             HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
@@ -488,7 +488,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
 
         for (int i = 0; i < 1000; i++) {
             HashAndRange har = new HashAndRange.Builder().setHashKey("yo this is cool").setRangeKey("" + i).build();
@@ -513,7 +513,7 @@ public class TablePersistenceTest {
             ctr.setAttributeDefinitions(ImmutableList.of(new AttributeDefinition("hashKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
         ByteBuffer bb = ByteBuffer.wrap("val".getBytes());
         SimpleFreeBuiltWithBinaryAttribute instance = new SimpleFreeBuiltWithBinaryAttribute.Builder()
                                                     .setHashKey("hk").setByteBufferValue(bb).build();
@@ -540,7 +540,7 @@ public class TablePersistenceTest {
                     new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
         });
 
-        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient, dynamoDB);
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
         List<HashAndRange> items = new ArrayList<>();
         items.add(new HashAndRange.Builder().setHashKey("hk1").build());
         items.add(new HashAndRange.Builder().setHashKey("hk2").build());
