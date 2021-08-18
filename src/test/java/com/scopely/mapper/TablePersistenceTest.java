@@ -42,7 +42,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TablePersistenceTest {
     private DynamoLocal dynamoLocal;
     private AmazonDynamoDBClient amazonDynamoDBClient;
-    private DynamoDB dynamoDB;
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @Before
@@ -50,7 +49,6 @@ public class TablePersistenceTest {
         dynamoLocal = new DynamoLocal();
         dynamoLocal.start();
         amazonDynamoDBClient = dynamoLocal.buildDynamoClient();
-        dynamoDB = new DynamoDB(amazonDynamoDBClient);
     }
 
     @After
