@@ -9,6 +9,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBVersionAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
 import com.amazonaws.services.dynamodbv2.datamodeling.ScanResultPage;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
@@ -18,6 +19,7 @@ import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.aws.dynamo.local.DynamoLocal;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -522,6 +524,35 @@ public class TablePersistenceTest {
 
         jsonDynamoMapper.delete(SimpleFreeBuiltWithBinaryAttribute.class, "hk");
         assertThat(jsonDynamoMapper.load(SimpleFreeBuiltWithBinaryAttribute.class, "hk").isPresent()).isFalse();
+    }
+
+    @Test
+    public void save_all() throws JsonProcessingException {
+        dynamoLocal.createTable(ctr -> {
+            ctr.setTableName("hash_and_range");
+            ctr.setKeySchema(ImmutableList.of(
+                    new KeySchemaElement("hashKey", KeyType.HASH),
+                    new KeySchemaElement("rangeKey", KeyType.RANGE)));
+            ctr.setAttributeDefinitions(ImmutableList.of(
+                    new AttributeDefinition("hashKey", ScalarAttributeType.S),
+                    new AttributeDefinition("rangeKey", ScalarAttributeType.S)));
+        });
+
+        JsonDynamoMapper jsonDynamoMapper = new JsonDynamoMapper(amazonDynamoDBClient);
+        List<HashAndRange> items = new ArrayList<>();
+        items.add(new HashAndRange.Builder().setHashKey("hk1").build());
+        items.add(new HashAndRange.Builder().setHashKey("hk2").build());
+
+        jsonDynamoMapper.saveAll(HashAndRange.class, items);
+
+        List<HashAndRange> dbItems = jsonDynamoMapper.scanAll(HashAndRange.class);
+        for (HashAndRange hr : dbItems) {
+            HashAndRange item = dbItems.stream().filter(i -> i.getHashKey() == hr.getHashKey()).findFirst().get();
+            assertThat(item).isEqualToComparingFieldByField(hr);
+
+            jsonDynamoMapper.delete(HashAndRange.class, hr.getHashKey(), hr.getRangeKey());
+            assertThat(jsonDynamoMapper.load(HashAndRange.class, hr.getHashKey(), hr.getRangeKey()).isPresent()).isFalse();
+        }
     }
 
     /**
