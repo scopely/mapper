@@ -23,5 +23,8 @@ jobs:
         distribution: 'temurin'
     - name: Build with Gradle
       uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+      env:
+        AWS_ACCESS_KEY_ID: foo
+        AWS_SECRET_KEY: bar
       with:
-        arguments: build
+        arguments: check
