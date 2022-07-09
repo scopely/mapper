@@ -9,21 +9,6 @@ This allows you to use libraries like [FreeBuilder](https://github.com/google/Fr
 and minimal boilerplate, while still maintaining the simple DynamoDB persistence afforded by the
 [DynamoDB object mapper](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBMapper.html).
 
-<a href="https://travis-ci.org/scopely/mapper"><img src="https://travis-ci.org/scopely/mapper.svg" /></a>
-[ ![Download](https://api.bintray.com/packages/scopely-oss/scopely-maven/mapper/images/download.svg) ](https://bintray.com/scopely-oss/scopely-maven/mapper/_latestVersion)[![Codacy Badge](https://api.codacy.com/project/badge/Grade/cc345a4d4bee459fa916c5ef3a7c6985)](https://www.codacy.com/app/avram/mapper?utm_source=github.com&utm_medium=referral&utm_content=scopely/mapper&utm_campaign=badger)
-
-
-This library is hosted on Bintray, to use it in your build, add the Maven repository to your repositories list:
-
-```groovy
-repositories {
-    maven {
-        url  "http://dl.bintray.com/scopely-oss/scopely-maven"
-    }
-}
-```
-
-
 ## Examples
 
 Mapper supports the version attribute for [optimistic locking](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBMapper.OptimisticLocking.html):

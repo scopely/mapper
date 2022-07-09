@@ -31,12 +31,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -479,15 +479,8 @@ public class JsonDynamoMapper {
         AnnotatedType annotatedReturnType = method.getAnnotatedReturnType();
         Type type = annotatedReturnType.getType();
 
-        try {
-            Class.forName("sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl");
-        } catch (ClassNotFoundException e) {
-            // if this class does not exists, we can't check for the actual parameters
-            return false;
-        }
-
-        if (type instanceof ParameterizedTypeImpl) {
-            Type parameterType = ((ParameterizedTypeImpl) type).getActualTypeArguments()[0];
+        if (type instanceof ParameterizedType) {
+            Type parameterType = ((ParameterizedType) type).getActualTypeArguments()[0];
             String typeName = parameterType.getTypeName();
             if (String.class.getName().equals(typeName)) {
                 return true;
