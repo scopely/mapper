@@ -1,23 +1,51 @@
+buildscript {
+    repositories {
+        maven {
+            url 'https://scopelybin.jfrog.io/scopelybin/playgami-maven-all'
+            credentials {
+                username "$artifactoryUser"
+                password "$artifactoryPassword"
+            }
+        }
+    }
+    dependencies {
+        classpath "com.scopely:scopely-publish-plugin:$publish_plugin_version"
+    }
+}
+
 plugins {
-    id "org.inferred.processors" version "3.6.0"
+    id "org.inferred.processors" version "$gradle_processors_version"
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url 'https://plugins.gradle.org/m2/'
+        credentials {
+            username "$artifactoryUser"
+            password "$artifactoryPassword"
+        }
+    }
 }
 
 group 'com.scopely'
 
 apply plugin: 'java'
-apply plugin: 'maven-publish'
+apply plugin: 'scopely-publishing'
+
+scopely {
+    publishing {
+        artifactId 'mapper'
+    }
+}
+release {
+    git {
+        requireBranch = 'master'
+    }
+}
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
-
-repositories {
-    mavenCentral()
-    maven {
-        url 'https://plugins.gradle.org/m2/'
-    }
-    maven { url "https://jitpack.io" }
-}
-
 
 dependencies {
     processor 'org.inferred:freebuilder:1.14.1'
@@ -35,7 +63,6 @@ dependencies {
     testImplementation 'pl.pragmatists:JUnitParams:1.0.5'
     testImplementation group: 'junit', name: 'junit', version: '4.11'
 }
-
 
 task sourcesJar(type: Jar) {
     classifier = 'sources'
